@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mood Compass</title>
+<style>
+  :root {
+    --bg: #f6f4ef; --card: #ffffff; --ink: #1f2a44; --muted: #6b7280; --line: #e7e3da;
+    --accent: #1f2a44; --soft: #efece4;
+    --m2: #d9480f; --m1: #e8a10c; --m0: #2f9e44; --mn1: #4263eb; --mn2: #5f3dc4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #12151c; --card: #1b1f29; --ink: #eceff4; --muted: #9aa3b2; --line: #2a303d;
+            --accent: #eceff4; --soft: #232836; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 520px; margin: 0 auto; padding: 20px 16px 48px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+  h2 { font-size: 15px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .date { color: var(--muted); font-size: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; margin-bottom: 14px; }
+  .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .slot { border: 1.5px solid var(--line); background: transparent; color: var(--ink); border-radius: 12px;
+          padding: 9px 4px; font: inherit; font-size: 14px; cursor: pointer; }
+  .slot small { display: block; color: var(--muted); font-size: 12px; }
+  .slot.active { border-color: var(--accent); background: var(--soft); font-weight: 600; }
+  .slot.done small { color: var(--m0); }
+  .q { font-size: 20px; font-weight: 600; margin: 0 0 12px; }
+  .moods { display: grid; gap: 8px; }
+  .mood { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; cursor: pointer;
+          padding: 12px 14px; border-radius: 14px; border: 2px solid transparent; font: inherit; color: var(--ink);
+          background: color-mix(in srgb, var(--c) 12%, var(--card)); transition: transform .08s; }
+  .mood:active { transform: scale(.985); }
+  .mood .e { font-size: 24px; width: 30px; text-align: center; }
+  .mood b { display: block; }
+  .mood span.d { font-size: 13px; color: var(--muted); }
+  .mood.sel { border-color: var(--c); background: color-mix(in srgb, var(--c) 24%, var(--card)); }
+  .extras { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  label.f { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  input[type=number], textarea { width: 100%; font: inherit; color: var(--ink); background: var(--soft);
+          border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+  textarea { min-height: 84px; resize: vertical; margin-top: 2px; }
+  .toggle { display: flex; gap: 6px; }
+  .toggle button { flex: 1; padding: 10px 0; border-radius: 10px; border: 1px solid var(--line); background: var(--soft);
+          color: var(--ink); font: inherit; cursor: pointer; }
+  .toggle button.on { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .notes { margin-top: 12px; }
+  .save { width: 100%; margin-top: 14px; padding: 14px; border: 0; border-radius: 14px; background: var(--accent);
+          color: var(--bg); font: 600 16px/1 inherit; font-family: inherit; cursor: pointer; }
+  .save:disabled { opacity: .4; cursor: default; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .stat { background: var(--soft); border-radius: 12px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 20px; }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .insight { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 15px; }
+  .insight:first-of-type { border-top: 0; }
+  .insight .i { font-size: 18px; }
+  .insight.warn { color: inherit; }
+  .insight.warn .t { border-left: 3px solid var(--m2); padding-left: 8px; }
+  svg { width: 100%; height: auto; display: block; }
+  .entry { padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .entry:first-child { border-top: 0; }
+  .entry .h { display: flex; justify-content: space-between; color: var(--muted); }
+  .entry .n { margin-top: 4px; white-space: pre-wrap; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(80px); background: var(--ink);
+           color: var(--bg); padding: 12px 18px; border-radius: 12px; transition: transform .25s; font-size: 15px;
+           max-width: calc(100% - 32px); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .demo { font-size: 12px; background: var(--m1); color: #000; padding: 6px 10px; border-radius: 8px; margin-bottom: 12px; }
+  footer { font-size: 12px; color: var(--muted); text-align: center; margin-top: 18px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div id="demo" class="demo hidden">Preview mode: sample data saved in this browser only. Deploy in Apps Script to sync with Google Sheets.</div>
+  <header>
+    <h1>🧭 Mood Compass</h1>
+    <span class="date" id="date"></span>
+  </header>
+
+  <section class="card">
+    <div class="slots" id="slots"></div>
+    <p class="q" id="question">How are you feeling?</p>
+    <div class="moods" id="moods"></div>
+    <div class="extras">
+      <div id="sleepWrap">
+        <label class="f" for="sleep">Sleep last night (hrs)</label>
+        <input id="sleep" type="number" inputmode="decimal" min="0" max="24" step="0.5" placeholder="e.g. 7.5">
+      </div>
+      <div>
+        <label class="f">Meds taken?</label>
+        <div class="toggle" id="meds">
+          <button type="button" data-v="true">Yes</button><button type="button" data-v="false">No</button>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <label class="f" for="notes">Notes: what's going on, triggers, thoughts</label>
+      <textarea id="notes" placeholder="Optional"></textarea>
+    </div>
+    <button class="save" id="save" disabled>Save check-in</button>
+  </section>
+
+  <section class="card">
+    <h2>Insights</h2>
+    <div class="stats" id="stats"></div>
+    <div id="insights"></div>
+  </section>
+
+  <section class="card">
+    <h2>Last 14 days</h2>
+    <div id="chart"></div>
+  </section>
+
+  <section class="card">
+    <h2>Recent check-ins</h2>
+    <div id="recent"></div>
+  </section>
+
+  <footer id="footer">Mood Compass is a self-tracking tool, not medical advice.
+    If you're in crisis, call or text <b>988</b> (US) or your local emergency number.</footer>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const SLOTS = ['Morning', 'Afternoon', 'Evening'];
+const SLOT_ICON = { Morning: '🌅', Afternoon: '🌤️', Evening: '🌙' };
+const MOODS = [
+  { score: 2, label: 'Manic', emoji: '⚡', color: 'var(--m2)', hex: '#d9480f', desc: 'Racing thoughts, impulsive, little need for sleep' },
+  { score: 1, label: 'Elevated', emoji: '☀️', color: 'var(--m1)', hex: '#e8a10c', desc: 'Energized, upbeat, more talkative than usual' },
+  { score: 0, label: 'Balanced', emoji: '🌿', color: 'var(--m0)', hex: '#2f9e44', desc: 'Steady, calm, feeling like myself' },
+  { score: -1, label: 'Low', emoji: '🌧️', color: 'var(--mn1)', hex: '#4263eb', desc: 'Flat, tired, hard to get motivated' },
+  { score: -2, label: 'Depressed', emoji: '🌑', color: 'var(--mn2)', hex: '#5f3dc4', desc: 'Heavy, hopeless, withdrawn' },
+];
+const moodOf = s => MOODS.find(m => m.score === Math.max(-2, Math.min(2, Math.round(s))));
+const $ = id => document.getElementById(id);
+
+/* ---------- Backend: Apps Script, or a localStorage demo ---------- */
+const live = typeof google !== 'undefined' && google.script && google.script.run;
+const call = (fn, ...args) => new Promise((res, rej) =>
+  google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args));
+
+const api = live ? {
+  state: () => call('getState'),
+  save: e => call('saveEntry', e),
+  params: () => new Promise(res => google.script.url.getLocation(l => res(l.parameter || {}))),
+} : demoApi();
+
+function demoApi() {
+  $('demo').classList.remove('hidden');
+  const KEY = 'moodCompassDemo';
+  const iso = d => d.toISOString().slice(0, 10);
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } };
+  const store = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} };
+  let entries = load();
+  if (!entries) {
+    entries = []; let s = 0;
+    const sample = ['Good chat with a friend', 'Work stress', 'Couldn\'t sit still', 'Slept badly', 'Walked outside', ''];
+    for (let d = 13; d >= 1; d--) {
+      const date = iso(new Date(Date.now() - d * 864e5));
+      SLOTS.forEach((slot, i) => {
+        if (Math.random() < 0.12) return;
+        s = Math.max(-2, Math.min(2, Math.round(s * 0.6 + (Math.random() - 0.5) * 2.6)));
+        entries.push({ date, slot, score: s, sleep: i === 0 ? Math.round((5 + Math.random() * 4) * 2) / 2 : null,
+          meds: Math.random() < 0.9, notes: sample[Math.floor(Math.random() * sample.length)] });
+      });
+    }
+    store(entries);
+  }
+  const state = () => ({ today: iso(new Date()), hour: new Date().getHours(), entries });
+  return {
+    state: async () => state(),
+    save: async e => {
+      const today = iso(new Date());
+      entries = entries.filter(x => !(x.date === today && x.slot === e.slot));
+      entries.push({ date: today, slot: e.slot, score: e.score, sleep: e.sleep === '' ? null : Number(e.sleep),
+        meds: e.meds, notes: e.notes });
+      store(entries);
+      return state();
+    },
+    params: async () => Object.fromEntries(new URLSearchParams(location.search)),
+  };
+}
+
+/* ---------- State ---------- */
+let S = { today: '', hour: 9, entries: [] };
+let form = { slot: 'Morning', score: null, meds: null };
+
+const todays = () => S.entries.filter(e => e.date === S.today);
+const byTime = (a, b) => a.date === b.date ? SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot) : (a.date < b.date ? -1 : 1);
+const dayNum = iso => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
+const ago = iso => dayNum(S.today) - dayNum(iso);
+const shortDate = iso => new Date(dayNum(iso) * 864e5).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function defaultSlot() {
+  const now = S.hour < 12 ? 'Morning' : S.hour < 17 ? 'Afternoon' : 'Evening';
+  return now;
+}
+
+/* ---------- Render: check-in form ---------- */
+function renderSlots() {
+  const done = todays();
+  $('slots').innerHTML = SLOTS.map(s => {
+    const e = done.find(x => x.slot === s);
+    return `<button class="slot ${s === form.slot ? 'active' : ''} ${e ? 'done' : ''}" data-slot="${s}">
+      ${SLOT_ICON[s]} ${s}<small>${e ? '✓ ' + moodOf(e.score).label : 'pending'}</small></button>`;
+  }).join('');
+  $('question').textContent = `How's your ${form.slot.toLowerCase()} going?`;
+  $('sleepWrap').style.visibility = form.slot === 'Morning' ? 'visible' : 'hidden';
+}
+
+function renderMoods() {
+  $('moods').innerHTML = MOODS.map(m => `
+    <button class="mood ${form.score === m.score ? 'sel' : ''}" style="--c:${m.color}" data-score="${m.score}">
+      <span class="e">${m.emoji}</span><span><b>${m.label}</b><span class="d">${m.desc}</span></span>
+    </button>`).join('');
+  [...$('meds').children].forEach(b => b.classList.toggle('on', String(form.meds) === b.dataset.v));
+  const existing = todays().find(x => x.slot === form.slot);
+  $('save').disabled = form.score === null;
+  $('save').textContent = existing ? `Update ${form.slot.toLowerCase()} check-in` : `Save ${form.slot.toLowerCase()} check-in`;
+}
+
+function loadSlot(slot, preset) {
+  form.slot = slot;
+  const e = todays().find(x => x.slot === slot);
+  form.score = preset ?? (e ? e.score : null);
+  form.meds = e ? e.meds : null;
+  $('notes').value = e ? e.notes : '';
+  $('sleep').value = e && e.sleep != null ? e.sleep : '';
+  renderSlots(); renderMoods();
+}
+
+/* ---------- Smart insights ---------- */
+function analyze() {
+  const all = [...S.entries].sort(byTime);
+  const week = all.filter(e => ago(e.date) < 7);
+  const out = [];
+  const add = (icon, text, warn) => out.push({ icon, text, warn });
+
+  // Current run of elevated or low check-ins (most recent entries).
+  let up = 0, down = 0, peak = 0, trough = 0;
+  for (let i = all.length - 1; i >= 0 && all[i].score >= 1; i--) { up++; peak = Math.max(peak, all[i].score); }
+  for (let i = all.length - 1; i >= 0 && all[i].score <= -1; i--) { down++; trough = Math.min(trough, all[i].score); }
+  if (up >= 3) add('⚡', `Your last ${up} check-ins were Elevated${peak === 2 ? ' or Manic' : ''}. Protect your sleep, ease off caffeine and big decisions${peak === 2 ? ', and consider reaching out to your care team' : ''}.`, true);
+  if (down >= 3) add('🌧️', `Your last ${down} check-ins were Low${trough === -2 ? ' or Depressed' : ''}. Be gentle with yourself: small routines, daylight, and ${trough === -2 ? 'please consider contacting your care team or someone you trust' : 'connection can help'}.`, true);
+
+  // Same-day swings (mixed / rapid shifts).
+  const days = {};
+  week.forEach(e => (days[e.date] = days[e.date] || []).push(e.score));
+  const mixed = Object.keys(days).filter(d => Math.max(...days[d]) >= 1 && Math.min(...days[d]) <= -1);
+  if (mixed.length) add('🔀', `Big same-day swings on ${mixed.map(shortDate).join(', ')}. Rapid shifts are worth mentioning to your clinician.`, true);
+
+  // Sleep: recent short nights + personal correlation.
+  const shortNight = all.filter(e => e.sleep != null && e.sleep < 6 && ago(e.date) < 3).pop();
+  if (shortNight) add('😴', `Only ${shortNight.sleep} h of sleep on ${shortDate(shortNight.date)}. Short sleep is one of the most common early triggers for mood shifts.`, up >= 1);
+  const sleepByDay = {};
+  all.forEach(e => { if (e.sleep != null) sleepByDay[e.date] = e.sleep; });
+  const dayAvg = d => { const s = all.filter(e => e.date === d).map(e => e.score); return s.reduce((a, b) => a + b, 0) / s.length; };
+  const shortD = Object.keys(sleepByDay).filter(d => sleepByDay[d] < 6.5), longD = Object.keys(sleepByDay).filter(d => sleepByDay[d] >= 7);
+  if (shortD.length >= 3 && longD.length >= 3) {
+    const a = shortD.reduce((t, d) => t + Math.abs(dayAvg(d)), 0) / shortD.length;
+    const b = longD.reduce((t, d) => t + Math.abs(dayAvg(d)), 0) / longD.length;
+    if (a - b >= 0.4) add('🛏️', `On days after less than 6.5 h of sleep your mood drifts further from Balanced (${a.toFixed(1)} vs ${b.toFixed(1)}). Sleep looks like one of your levers.`);
+  }
+
+  // Time-of-day pattern.
+  const slotAvg = SLOTS.map(s => { const v = all.filter(e => e.slot === s).map(e => e.score); return { s, n: v.length, avg: v.reduce((a, b) => a + b, 0) / (v.length || 1) }; })
+    .filter(x => x.n >= 4).sort((a, b) => a.avg - b.avg);
+  if (slotAvg.length >= 2 && slotAvg.at(-1).avg - slotAvg[0].avg >= 0.6)
+    add('🕑', `Your ${slotAvg[0].s.toLowerCase()}s tend to run lower than your ${slotAvg.at(-1).s.toLowerCase()}s. Plan gentler starts or lighter tasks then.`);
+
+  // Meds.
+  const missed = week.filter(e => e.meds === false).length;
+  if (missed) add('💊', `Meds marked missed ${missed}× this week. A phone alarm or a pill case can help.`, missed >= 2);
+
+  if (!out.length && week.length >= 5) add('🌿', 'A steady stretch. No warning patterns this week. Keep it up.');
+  if (!out.length) add('📝', 'Keep checking in. Patterns and insights show up after a few days of entries.');
+  return { out, week };
+}
+
+function streak() {
+  const dates = new Set(S.entries.map(e => e.date));
+  let n = 0, d = dates.has(S.today) ? 0 : 1;
+  while (dates.has(isoAgo(d))) { n++; d++; }
+  return n;
+}
+const isoAgo = n => new Date((dayNum(S.today) - n) * 864e5).toISOString().slice(0, 10);
+
+function renderInsights() {
+  const { out, week } = analyze();
+  const avg = week.length ? week.reduce((a, e) => a + e.score, 0) / week.length : null;
+  const m = avg == null ? null : moodOf(avg);
+  $('stats').innerHTML = `
+    <div class="stat"><b>${streak()}🔥</b><span>day streak</span></div>
+    <div class="stat"><b>${week.length}/21</b><span>check-ins this week</span></div>
+    <div class="stat"><b>${m ? m.emoji : '–'}</b><span>${m ? m.label + ' avg' : 'no data yet'}</span></div>`;
+  $('insights').innerHTML = out.map(i =>
+    `<div class="insight ${i.warn ? 'warn' : ''}"><span class="i">${i.icon}</span><span class="t">${esc(i.text)}</span></div>`).join('');
+  const crisis = S.entries.some(e => e.score === -2 && ago(e.date) < 2);
+  $('footer').style.fontSize = crisis ? '14px' : '12px';
+  $('footer').style.color = crisis ? 'var(--ink)' : '';
+}
+
+/* ---------- Chart ---------- */
+function renderChart() {
+  const W = 340, H = 170, L = 26, R = 6, T = 8, B = 22;
+  const x = i => L + (i + 0.5) * (W - L - R) / 14;
+  const y = s => T + (2 - s) * (H - T - B) / 4;
+  let g = '';
+  MOODS.forEach(m => {
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(m.score)}" y2="${y(m.score)}" stroke="var(--line)" stroke-width="1"/>`;
+    g += `<text x="${L - 6}" y="${y(m.score) + 4}" font-size="11" text-anchor="end">${m.emoji}</text>`;
+  });
+  const pts = [];
+  for (let i = 0; i < 14; i++) {
+    const date = isoAgo(13 - i);
+    const es = S.entries.filter(e => e.date === date);
+    if (i % 2 === 1 || i === 13) g += `<text x="${x(i)}" y="${H - 6}" font-size="9" fill="var(--muted)" text-anchor="middle">${i === 13 ? 'today' : new Date(dayNum(date) * 864e5).getUTCDate()}</text>`;
+    es.forEach(e => {
+      const off = (SLOTS.indexOf(e.slot) - 1) * 6;
+      g += `<circle cx="${x(i) + off}" cy="${y(e.score)}" r="4" fill="${moodOf(e.score).hex}"><title>${e.date} ${e.slot}: ${moodOf(e.score).label}</title></circle>`;
+    });
+    if (es.length) pts.push(`${x(i)},${y(es.reduce((a, e) => a + e.score, 0) / es.length)}`);
+  }
+  if (pts.length > 1) g = `<polyline points="${pts.join(' ')}" fill="none" stroke="var(--ink)" stroke-opacity=".35" stroke-width="2" stroke-linejoin="round"/>` + g;
+  $('chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Mood over the last 14 days">${g}</svg>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px">Dots = each check-in · line = daily average</div>`;
+}
+
+function renderRecent() {
+  const list = [...S.entries].sort(byTime).reverse().slice(0, 8);
+  $('recent').innerHTML = list.length ? list.map(e => {
+    const m = moodOf(e.score);
+    const extra = [e.sleep != null ? `😴 ${e.sleep}h` : '', e.meds === true ? '💊 ✓' : e.meds === false ? '💊 ✗' : ''].filter(Boolean).join(' · ');
+    return `<div class="entry"><div class="h"><span><span class="dot" style="background:${m.hex}"></span><b style="color:var(--ink)">${m.label}</b> · ${e.slot}</span>
+      <span>${e.date === S.today ? 'Today' : shortDate(e.date)}</span></div>
+      ${extra ? `<div style="font-size:12px;color:var(--muted)">${extra}</div>` : ''}
+      ${e.notes ? `<div class="n">${esc(e.notes)}</div>` : ''}</div>`;
+  }).join('') : '<div style="color:var(--muted)">No check-ins yet.</div>';
+}
+
+function renderAll() {
+  $('date').textContent = new Date(dayNum(S.today) * 864e5).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  renderSlots(); renderMoods(); renderInsights(); renderChart(); renderRecent();
+}
+
+function toast(msg) {
+  $('toast').textContent = msg; $('toast').classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => $('toast').classList.remove('show'), 2600);
+}
+
+/* ---------- Events ---------- */
+$('slots').addEventListener('click', e => { const b = e.target.closest('[data-slot]'); if (b) loadSlot(b.dataset.slot); });
+$('moods').addEventListener('click', e => { const b = e.target.closest('[data-score]'); if (b) { form.score = Number(b.dataset.score); renderMoods(); } });
+$('meds').addEventListener('click', e => {
+  const b = e.target.closest('[data-v]'); if (!b) return;
+  const v = b.dataset.v === 'true'; form.meds = form.meds === v ? null : v; renderMoods();
+});
+$('save').addEventListener('click', async () => {
+  $('save').disabled = true; $('save').textContent = 'Saving…';
+  try {
+    S = await api.save({ slot: form.slot, score: form.score, meds: form.meds,
+      sleep: form.slot === 'Morning' ? $('sleep').value : '', notes: $('notes').value.trim() });
+    const next = SLOTS.find(s => !todays().some(e => e.slot === s));
+    toast(next ? `Saved ✓ Next up: ${next.toLowerCase()}` : 'Saved ✓ All 3 check-ins done today 🎉');
+    renderAll();
+  } catch (err) {
+    toast('Couldn’t save: ' + (err.message || err)); renderMoods();
+  }
+});
+
+/* ---------- Boot ---------- */
+(async () => {
+  try {
+    S = await api.state();
+    const p = await api.params();
+    const slot = SLOTS.includes(p.slot) ? p.slot : defaultSlot();
+    const preset = p.mood != null && MOODS.some(m => String(m.score) === p.mood) ? Number(p.mood) : undefined;
+    renderAll(); loadSlot(slot, preset);
+    if (preset !== undefined) toast('Mood selected. Add a note if you like, then tap Save.');
+  } catch (err) {
+    toast('Couldn’t load: ' + (err.message || err));
+  }
+})();
+</script>
+</body>
+</html>

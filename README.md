@@ -49,3 +49,29 @@ Open `Index.html` directly in a browser to try it with sample data. In this prev
 Everything stays in your Google account: your Sheet, your script, emails to yourself. Nothing goes to any outside service.
 
 *Mood Compass is a self-tracking tool, not medical advice. If you're in crisis, call or text 988 (US) or your local emergency number.*
+
+## Local development (GitHub + clasp)
+If you'd rather not copy-paste, deploy from your computer with [clasp](https://github.com/google/clasp).
+
+**Quick way (macOS / Linux / Git Bash on Windows):**
+```bash
+bash setup.sh
+```
+This creates the GitHub repo, logs you in to Google, creates a new **Mood Compass** Sheet with the script attached, and uploads the code.
+
+**Manual way:**
+```bash
+gh repo create mood-compass --private --source . --remote origin --push
+npm install -g @google/clasp
+# enable the Apps Script API: https://script.google.com/home/usersettings
+clasp login
+clasp create --type sheets --title "Mood Compass"
+git checkout -- appsscript.json   # keep this repo's manifest
+clasp push -f
+clasp open                         # then run setup() and Deploy → Web app
+```
+
+**Everyday workflow:** edit → `clasp push` → `git commit` → `git push`.
+To update the live app without changing its URL: Deploy → Manage deployments → ✏️ → New version.
+
+`.clasp.json` (your script ID) is git-ignored. Reminder times follow the **spreadsheet's** time zone (File → Settings), not the one in `appsscript.json`.
